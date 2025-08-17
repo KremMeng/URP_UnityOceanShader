@@ -11,7 +11,7 @@ Shader "Universal Render Pipeline/OceanShader"
         _RefactionDistortion("RefractionDistortion",Range(0,1)) = 0.5
         _BackLightTense("BackLightTense",Range(0,500)) = 30
         _EdgeArea("EdgeArea",Range(5,20))=8
-        _TransparentFactor("Transparency",Range(0,1)) = 0.28
+        _TransparentFactor("Transparency",Range(0,1)) = 0.75
         _DeepColor("DeepColor",Color) = (0.1, 0.5, 0.7, 1)
         _ShallowColor("ShallowColor",Color)=(0.275, 0.855, 1, 1)
     }
@@ -20,12 +20,26 @@ Shader "Universal Render Pipeline/OceanShader"
         Tags {
                 "RenderPipeline" = "UniversalPipeline"
                 "RenderType" = "Transparent"
-               // "IgnoreProjector" = "True"
-                "Queue" = "Transparent"
+                "Queue" = "Transparent" 
         }
         LOD 100
-        Blend SrcAlpha OneMinusSrcAlpha
-        ZWrite Off
+        
+       Pass
+       {
+            Name "DepthPre"
+            ZWrite On
+            ZTest LEqual
+            ColorMask 0
+       }
+       
+        Pass
+        {
+            Name "Main"
+            Tags {"LightMode" = "UniversalForward"}
+            ZWrite Off
+            ZTest LEqual
+            Blend SrcAlpha OneMinusSrcAlpha //alpha blending
+            Cull Off
 
         HLSLINCLUDE
          #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
@@ -39,8 +53,6 @@ Shader "Universal Render Pipeline/OceanShader"
          TEXTURE2D(_MainTex);
          SAMPLER(sampler_MainTex);
          
-         //TEXTURE2D(_CameraDepthTexture);
-         //SAMPLER(sampler_cameraDepthTexture);
          TEXTURE2D(_CameraOpaqueTexture);
          SAMPLER(sampler_CameraOpaqueTexture);
          
@@ -67,8 +79,6 @@ Shader "Universal Render Pipeline/OceanShader"
          CBUFFER_END
         ENDHLSL
         
-        Pass
-        {
             //Tags {"LightMode" = "UniversalForward"}
             HLSLPROGRAM
             #pragma vertex Vertex
@@ -131,27 +141,23 @@ Shader "Universal Render Pipeline/OceanShader"
                 
                 //transfluency SSS
                 half3 H0 = normalize(worldLightDir + _NormalBias * worldNormal);
-                half3 backDot = dot(viewDir,-H0);
+                half3 backDot = saturate(dot(viewDir,-H0));
                 half3 backDir = saturate(backDot);
                 half3 sssColor = pow(backDir,_EdgeArea) * _BackLightTense;
-
-                float3 baseColor =  diffuse + specular + sssColor ;
                 
                 //depth based LUT
-                float2 screenUV = i.screenPos.xy / i.screenPos.w;
+                //float2 screenUV = i.screenPos.xy / i.screenPos.w;
+                float2 screenUV = ComputeNormalizedDeviceCoordinates(i.screenPos);
                 float depth = SampleSceneDepth(screenUV);
                 float viewDepth = LinearEyeDepth(depth,_ZBufferParams); //clip2view
-                float linearDepth =  Linear01Depth(viewDepth,_ZBufferParams); //[0,1]
-                // float2 lutUV = float2(linearDepth,0.5);
-                // float3 lutColor = SAMPLE_TEXTURE2D(_depthLutTex,sampler_depthLutTex,lutUV);
-                //float3 lutColor = lerp(_ShallowColor,_DeepColor,linearDepth);
-                float alpha = 1.0 - saturate(linearDepth * _TransparentFactor);
+                float linearDepth = Linear01Depth(depth,_ZBufferParams); //[0,1]
+                float alpha = 1 - saturate(linearDepth * _TransparentFactor);
 
                 //reflection
-                float3 reflectionColor = SAMPLE_TEXTURE2D(_ReflectionTexture,sampler_ReflectionTexture,screenUV).r;
+                //float3 reflectionColor = SAMPLE_TEXTURE2D(_ReflectionTexture,sampler_ReflectionTexture,screenUV).rgb;
 
                 //refraction
-                float2 offset = worldNormal.xy * _RefactionDistortion  * linearDepth * 0.1; //normal is vec3
+                float2 offset = normalize(worldNormal).xy * _RefactionDistortion  * linearDepth * 0.1; //normal is vec3
                 screenUV.xy += offset;
                 float3 refraction = SAMPLE_TEXTURE2D(_CameraOpaqueTexture,sampler_CameraOpaqueTexture,screenUV).rgb;
                 
@@ -159,21 +165,19 @@ Shader "Universal Render Pipeline/OceanShader"
                 float fresnel = pow(1.0 - max(0, dot(worldNormal, viewDir)), 5.0);
                 fresnel = 0.98 * fresnel * _Specular.rgb;
                 
-                // //absorb && scatter
-                // float3 absorption = lerp(_ShallowColor,_DeepColor,linearDepth);
-                // float3 scattering = lerp(_DeepColor,_ShallowColor,linearDepth);
-                // float3 transfuencyColor = lerp(absorption,scattering,fresnel);
-                
                 //foam sampling
                 
+                float3 baseColor =  diffuse + specular + sssColor + fresnel;
+                float blendFactor = saturate(linearDepth*_TransparentFactor);
+                float3 refColor = lerp(refraction,baseColor,blendFactor);
                 
-                float3 refcol = lerp(refraction,baseColor,saturate(depth * _TransparentFactor));
-
-                float3 finalColor = lerp(refcol,reflectionColor,fresnel);
-                
-                return half4(finalColor,alpha);
+                //return half4(baseColor,alpha);
+                return half4(refColor,alpha);
+     
             }
            ENDHLSL
         }
+    UsePass "Universal Render Pipeline/Lit/DepthOnly"
+    UsePass "Universal Render Pipeline/Lit/DepthNormals"
     }
 }
