@@ -11,7 +11,7 @@ Shader "Universal Render Pipeline/OceanShader"
         _RefactionDistortion("RefractionDistortion",Range(0,1)) = 0.5
         _BackLightTense("BackLightTense",Range(0,500)) = 30
         _EdgeArea("EdgeArea",Range(5,20))=8
-        _TransparentFactor("Transparency",Range(0,1)) = 0.75
+        _TransparentFactor("Transparency",Range(0,0.99)) = 0.75
         _DeepColor("DeepColor",Color) = (0.1, 0.5, 0.7, 1)
         _ShallowColor("ShallowColor",Color)=(0.275, 0.855, 1, 1)
     }
@@ -147,7 +147,7 @@ Shader "Universal Render Pipeline/OceanShader"
                 
                 //depth based LUT
                 //float2 screenUV = i.screenPos.xy / i.screenPos.w;
-                float2 screenUV = ComputeNormalizedDeviceCoordinates(i.screenPos);
+                float2 screenUV = i.screenPos.xy/_ScaledScreenParams.xy;//考虑目标分辨率缩放，不会出现动态模糊
                 float depth = SampleSceneDepth(screenUV);
                 float viewDepth = LinearEyeDepth(depth,_ZBufferParams); //clip2view
                 float linearDepth = Linear01Depth(depth,_ZBufferParams); //[0,1]
@@ -157,9 +157,11 @@ Shader "Universal Render Pipeline/OceanShader"
                 //float3 reflectionColor = SAMPLE_TEXTURE2D(_ReflectionTexture,sampler_ReflectionTexture,screenUV).rgb;
 
                 //refraction
-                float2 offset = normalize(worldNormal).xy * _RefactionDistortion  * linearDepth * 0.1; //normal is vec3
+                float2 offset = normalize(worldNormal).xy * _RefactionDistortion  * linearDepth * 0.3; //normal is vec3
+                //screenUV = ComputeNormalizedDeviceCoordinates(i.screenPos);
                 screenUV.xy += offset;
                 float3 refraction = SAMPLE_TEXTURE2D(_CameraOpaqueTexture,sampler_CameraOpaqueTexture,screenUV).rgb;
+                
                 
                 //fresnel
                 float fresnel = pow(1.0 - max(0, dot(worldNormal, viewDir)), 5.0);
@@ -171,7 +173,7 @@ Shader "Universal Render Pipeline/OceanShader"
                 float blendFactor = saturate(linearDepth*_TransparentFactor);
                 float3 refColor = lerp(refraction,baseColor,blendFactor);
                 
-                //return half4(baseColor,alpha);
+                //return half4(linearDepth,linearDepth,linearDepth,alpha);
                 return half4(refColor,alpha);
      
             }

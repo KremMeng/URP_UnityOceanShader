@@ -82,22 +82,22 @@ Material:
     - _EdgeArea: 17.02
     - _GlossMapScale: 1
     - _Glossiness: 0.5
-    - _Glossness: 536
+    - _Glossness: 722
     - _GlossyReflections: 1
     - _Metallic: 0
     - _Mode: 0
-    - _NormalBias: 0.753
+    - _NormalBias: 0.731
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _QueueOffset: 0
-    - _RefactionDistortion: 0.28
+    - _RefactionDistortion: 0.905
     - _RefractionDistortion: 0.5
     - _SampleGI: 0
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _Surface: 0
-    - _TransparentFactor: 0.648
+    - _TransparentFactor: 0.63
     - _UVSec: 0
     - _ZWrite: 1
     m_Colors:
@@ -105,11 +105,11 @@ Material:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _DeepColor: {r: 0.07584745, g: 0.29999548, b: 0.408805, a: 1}
     - _DeepWater: {r: 0.16522783, g: 0.34166613, b: 0.4433962, a: 1}
-    - _Diffuse: {r: 0.104129426, g: 0.45843512, b: 0.735849, a: 0.7490196}
+    - _Diffuse: {r: 0.10588236, g: 0.5451136, b: 0.7372549, a: 0.7490196}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _Reflection: {r: 0, g: 0, b: 0, a: 0}
     - _ReflectionColor: {r: 1, g: 1, b: 1, a: 1}
     - _ShallowColor: {r: 0.16174191, g: 0.59119487, b: 0.57282394, a: 1}
     - _ShallowMaterial: {r: 0.22368567, g: 0.81761, b: 0.7707938, a: 1}
-    - _Specular: {r: 0.8742138, g: 0.7745251, b: 0.6570349, a: 1}
+    - _Specular: {r: 1, g: 0.686964, b: 0.31132066, a: 1}
   m_BuildTextureStacks: []
